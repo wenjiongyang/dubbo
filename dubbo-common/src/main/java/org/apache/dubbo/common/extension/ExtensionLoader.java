@@ -89,20 +89,20 @@ public class ExtensionLoader<T> {
 
     private static final ConcurrentMap<Class<?>, Object> EXTENSION_INSTANCES = new ConcurrentHashMap<>(64);
 
-    // 当前 ExtensionLoader 实例负责加载的扩展接口
+    // learn: 当前 ExtensionLoader 实例负责加载的扩展接口
     private final Class<?> type;
 
     private final ExtensionFactory objectFactory;
-    // 缓存了该 ExtensionLoader 加载的扩展实现类与扩展名之间的映射关系
+    // learn: 缓存了该 ExtensionLoader 加载的扩展实现类与扩展名之间的映射关系
     private final ConcurrentMap<Class<?>, String> cachedNames = new ConcurrentHashMap<>();
-    // 缓存了该 ExtensionLoader 加载的扩展名与扩展实现类之间的映射关系; 与 cachedNames 集合的反向关系缓存
+    // learn: 缓存了该 ExtensionLoader 加载的扩展名与扩展实现类之间的映射关系; 与 cachedNames 集合的反向关系缓存
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<>();
 
     private final Map<String, Object> cachedActivates = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<>();
     private final Holder<Object> cachedAdaptiveInstance = new Holder<>();
     private volatile Class<?> cachedAdaptiveClass = null;
-    // 记录了type属性 这个接口上@SPI 注解的value 值,也就是默认扩展名
+    // learn: 记录了type属性 这个接口上@SPI 注解的value 值,也就是默认扩展名
     private String cachedDefaultName;
     private volatile Throwable createAdaptiveInstanceError;
 
@@ -163,7 +163,7 @@ public class ExtensionLoader<T> {
             throw new IllegalArgumentException("Extension type (" + type +
                     ") is not an extension, because it is NOT annotated with @" + SPI.class.getSimpleName() + "!");
         }
-        // 根据扩展接口, 从 EXTENSION_LOADERS 缓存中查找相应的 ExtensionLoader 实例
+        // learn: 根据扩展接口, 从 EXTENSION_LOADERS 缓存中查找相应的 ExtensionLoader 实例
         ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         if (loader == null) {
             EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type));
@@ -172,11 +172,11 @@ public class ExtensionLoader<T> {
         return loader;
     }
 
-    // For testing purposes only
+    // learn: For testing purposes only
     public static void resetExtensionLoader(Class type) {
         ExtensionLoader loader = EXTENSION_LOADERS.get(type);
         if (loader != null) {
-            // Remove all instances associated with this loader as well
+            // learn: Remove all instances associated with this loader as well
             Map<String, Class<?>> classes = loader.getExtensionClasses();
             for (Map.Entry<String, Class<?>> entry : classes.entrySet()) {
                 EXTENSION_INSTANCES.remove(entry.getValue());
@@ -422,15 +422,15 @@ public class ExtensionLoader<T> {
         if ("true".equals(name)) {
             return getDefaultExtension();
         }
-        // getOrCreateHolder()方法中封装了查找cachedInstances缓存的逻辑
+        // learn: getOrCreateHolder()方法中封装了查找cachedInstances缓存的逻辑
         final Holder<Object> holder = getOrCreateHolder(name);
         Object instance = holder.get();
         if (instance == null) {
-            // double-check防止并发问题
+            // learn: double-check防止并发问题
             synchronized (holder) {
                 instance = holder.get();
                 if (instance == null) {
-                    // 根据扩展名从SPI配置文件中查找对应的扩展实现类
+                    // learn: 根据扩展名从SPI配置文件中查找对应的扩展实现类
                     instance = createExtension(name, wrap);
                     holder.set(instance);
                 }
@@ -628,31 +628,31 @@ public class ExtensionLoader<T> {
         return new IllegalStateException(buf.toString());
     }
 
-    // 1. 完成SPI 配置文件的查找以及相应扩展类的实例化
-    // 2. 实现自动装配以及自动 wrapper 包装功能
+    // learn: 1. 完成SPI 配置文件的查找以及相应扩展类的实例化
+    // learn: 2. 实现自动装配以及自动 wrapper 包装功能
     @SuppressWarnings("unchecked")
     private T createExtension(String name, boolean wrap) {
-        // 获取 cachedClasses 缓存, 根据扩展名从缓存中获取扩展实现类.
-        // 如果 cachedClasses 未初始化, 则会扫描三个 SPI 目录获取查找相应的 SPI 配置文件，
-        // 然后加载其中的扩展实现类，最后将扩展名和扩展实现类的映射关系记录到 cachedClasses 缓存中
-        // 这部分逻辑在 loadExtensionClasses() 和 loadDirectory() 方法中
+        // learn: 获取 cachedClasses 缓存, 根据扩展名从缓存中获取扩展实现类.
+        // learn: 如果 cachedClasses 未初始化, 则会扫描三个 SPI 目录获取查找相应的 SPI 配置文件，
+        // learn: 然后加载其中的扩展实现类，最后将扩展名和扩展实现类的映射关系记录到 cachedClasses 缓存中
+        // learn: 这部分逻辑在 loadExtensionClasses() 和 loadDirectory() 方法中
         Class<?> clazz = getExtensionClasses().get(name);
         if (clazz == null) {
             throw findException(name);
         }
         try {
-            // 根据扩展实现类从 EXTENSION_INSTANCES 缓存中查找相应的实例。如果查找失败，会通过反射创建扩展实现对象
+            // learn: 根据扩展实现类从 EXTENSION_INSTANCES 缓存中查找相应的实例。如果查找失败，会通过反射创建扩展实现对象
             T instance = (T) EXTENSION_INSTANCES.get(clazz);
             if (instance == null) {
                 EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
-            // 自动装配扩展实现对象中的属性（即调用其 setter）
+            // learn: 自动装配扩展实现对象中的属性（即调用其 setter）
             injectExtension(instance);
 
 
             if (wrap) {
-                // 自动包装扩展实现对象
+                // learn: 自动包装扩展实现对象
                 List<Class<?>> wrapperClassesList = new ArrayList<>();
                 if (cachedWrapperClasses != null) {
                     wrapperClassesList.addAll(cachedWrapperClasses);
@@ -670,7 +670,7 @@ public class ExtensionLoader<T> {
                     }
                 }
             }
-            // 如果扩展实现类实现了 Lifecycle 接口，在 initExtension() 方法中会调用 initialize() 方法进行初始化
+            // learn: 如果扩展实现类实现了 Lifecycle 接口，在 initExtension() 方法中会调用 initialize() 方法进行初始化
             initExtension(instance);
             return instance;
         } catch (Throwable t) {
